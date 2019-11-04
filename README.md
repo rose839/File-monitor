@@ -1,2 +1,2 @@
 # File-monitor
-a lib for monitor directory and file in linux by inotify
+A framework for monitor directory and file。
