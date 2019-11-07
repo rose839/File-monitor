@@ -15,6 +15,17 @@
 namespace fm{
 
     /*
+     * This enumeration lists all the available monitors, you can
+     * add the platform-specific default monitor.
+     * */
+    enum fm_monitor_type
+    {
+        system_default_monitor_type = 0, /*System default monitor. */
+        inotify_monitor_type,            /*Linux `inotify` monitor. */
+        poll_monitor_type,               /* `stat()`-based poll monitor. */
+    };
+
+    /*
      * @brief Function definition of an event callback.
      * The event callback is a user-supplied function that is invoked by the
      * monitor when an event is detected. The following parameters are passed to
@@ -175,6 +186,58 @@ namespace fm{
         bool accept_event_type(enum fm_event_flag flag) const;
         bool accept_path(std::string path) const;
         void notify_events(const std::vector<event>& events) const;
+        void notify_overflow(const std::string& path) const;
+
+        /*
+         * This function filters the event types of an event leaving only the types
+         * allowed by the configured filters.
+         * */
+        std::vector<fsw_event_flag> filter_flags(const event& evt) const;
+
+        /*
+         * This function implements the monitor event watching logic.  This function
+         * is called from start() and it is executed on its thread.  This function
+         * should block until the monitoring loop terminates: when it returns, the
+         * monitor is marked as stopped.
+         *
+         * This function should cooperatively check the Monitor::should_stop field
+         * locking monitor::run_mutex and return if set to true.
+         * */
+        virtual void run();
+
+        /*
+         * This function is executed by the stop() method, after requesting the
+         * monitor to stop.  This handler is required if the thread running run() is
+         * not able to preemptively stop its execution by checking the
+         * Monitor::should_stop flag.
+         * */
+        virtual void on_stop();
+
+    protected:
+        std::vector<std::path> paths;
+        std::map<std::string, std::string> properties;
+        FM_EVENT_CALLBACK *callback;
+        void *context = nullptr;
+        double latency = 1.0;
+        bool fire_idle_event = false;
+        bool allow_overflow = false;
+        bool recursive = false;
+        bool follow_symlinks = false;
+        bool directory_only = false;
+        bool watch_access = false;
+
+        /*
+         * Monitor state
+         * */
+        bool running = false;
+        bool should_stop = false;
+
+        mutable std::mutex run_mutex;
+        mutable std::mutex notify_mutex;
+
+    private:
+        std::chrono::milliseconds get_latency_ms() const;
+
     };
 }
 

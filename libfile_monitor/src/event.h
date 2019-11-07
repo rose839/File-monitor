@@ -59,7 +59,7 @@ namespace fm {
     private:
         std::string path;
         time_t event_time;
-        std::vector<fm_event_flag> flags
+        std::vector<fm_event_flag> flags;
     };
 
     /*
