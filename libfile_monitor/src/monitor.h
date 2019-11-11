@@ -104,7 +104,7 @@ namespace fm{
      *   - The notify_events() method is called to filter the event types and
      *     notify the caller.
      * */
-    class Moniter {
+    class Monitor {
     public:
         Monitor(std::vector<std::string> paths,
                 FM_EVENT_CALLBACK *callback,
