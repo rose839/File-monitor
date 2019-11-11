@@ -13,13 +13,13 @@
 #define FM_ERR_CALLBACK_NOT_SET           (1 << 5)  /* The callback has not been set. */
 #define FM_ERR_PATHS_NOT_SET              (1 << 6)  /* The paths to watch have not been set. */
 #define FM_ERR_MISSING_CONTEXT            (1 << 7)  /* The callback context has not been set. */
-#define FSW_ERR_INVALID_PATH              (1 << 8)  /* The path is invalid. */
-#define FSW_ERR_INVALID_CALLBACK          (1 << 9)  /* The callback is invalid. */
-#define FSW_ERR_INVALID_LATENCY           (1 << 10) /* The latency is invalid. */
-#define FSW_ERR_INVALID_REGEX             (1 << 11) /* The regular expression is invalid. */
-#define FSW_ERR_MONITOR_ALREADY_RUNNING   (1 << 12) /* A monitor is already running in the specified session. */
-#define FSW_ERR_UNKNOWN_VALUE             (1 << 13) /* The value is unknown. */
-#define FSW_ERR_INVALID_PROPERTY          (1 << 14) /* The property is invalid. */
+#define FM_ERR_INVALID_PATH               (1 << 8)  /* The path is invalid. */
+#define FM_ERR_INVALID_CALLBACK           (1 << 9)  /* The callback is invalid. */
+#define FM_ERR_INVALID_LATENCY            (1 << 10) /* The latency is invalid. */
+#define FM_ERR_INVALID_REGEX              (1 << 11) /* The regular expression is invalid. */
+#define FM_ERR_MONITOR_ALREADY_RUNNING    (1 << 12) /* A monitor is already running in the specified session. */
+#define FM_ERR_UNKNOWN_VALUE              (1 << 13) /* The value is unknown. */
+#define FM_ERR_INVALID_PROPERTY           (1 << 14) /* The property is invalid. */
 
 
 #endif //FILE_MONITOR_ERROR_H

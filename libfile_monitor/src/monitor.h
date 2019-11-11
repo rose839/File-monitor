@@ -14,6 +14,11 @@
 
 namespace fm{
 
+    typedef struct _compiled_monitor_filter {
+        std::regex regex;
+        fsw_filter_type type;
+    }COMPILED_MONITOR_FILTER_S;
+
     /*
      * This enumeration lists all the available monitors, you can
      * add the platform-specific default monitor.
@@ -110,8 +115,8 @@ namespace fm{
                 FM_EVENT_CALLBACK *callback,
                 void *context = nullptr);
         virtual ~Monitor();
-        Moniter(const Moniter &orig) = delete;
-        Moniter &operator=(const Moniter &that) = delete;
+        Monitor(const Moniter &orig) = delete;
+        Monitor &operator=(const Monitor &that) = delete;
 
         void set_property(const std::string &name, const std::string &value);
         void set_properties(const std::map<std::string, std::string> &options);
@@ -237,7 +242,10 @@ namespace fm{
 
     private:
         std::chrono::milliseconds get_latency_ms() const;
+        std::vector<COMPILED_MONITOR_FILTER_S> filters;
+        std::vector<EVENT_TYPE_FILTER> event_type_filters;
 
+        std::atomic<std::chrono::milliseconds> last_notification;
     };
 }
 

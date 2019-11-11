@@ -36,7 +36,7 @@ namespace fm{
         filter_exclude
     };
 
-    class Moniter_filter {
+    class Monitor_filter {
     public:
         std::string text;
         fm_filter_type type;
