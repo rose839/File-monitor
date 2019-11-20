@@ -188,7 +188,7 @@ namespace fm{
         void set_watch_access(bool access);
 
     protected:
-        bool accept_event_type(enum fm_event_flag flag) const;
+        bool accept_event_type(enum fm_event_flag event_type) const;
         bool accept_path(std::string path) const;
         void notify_events(const std::vector<event>& events) const;
         void notify_overflow(const std::string& path) const;
@@ -242,9 +242,10 @@ namespace fm{
 
     private:
         std::chrono::milliseconds get_latency_ms() const;
-        std::vector<COMPILED_MONITOR_FILTER_S> filters;
-        std::vector<EVENT_TYPE_FILTER> event_type_filters;
+        std::vector<COMPILED_MONITOR_FILTER_S> filters;     // path filter
+        std::vector<EVENT_TYPE_FILTER> event_type_filters;  // event type filter
 
+        static void inactivity_callback(Monitor *montor);
         std::atomic<std::chrono::milliseconds> last_notification;
     };
 }

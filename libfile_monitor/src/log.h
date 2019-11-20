@@ -1,0 +1,5 @@
+
+#ifndef FILE_MONITOR_LOG_H
+#define FILE_MONITOR_LOG_H
+
+#endif //FILE_MONITOR_LOG_H
