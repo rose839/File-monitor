@@ -197,7 +197,7 @@ namespace fm{
          * This function filters the event types of an event leaving only the types
          * allowed by the configured filters.
          * */
-        std::vector<fsw_event_flag> filter_flags(const event& evt) const;
+        std::vector<fm_event_flag> filter_flags(const Event& evt) const;
 
         /*
          * This function implements the monitor event watching logic.  This function
@@ -208,7 +208,7 @@ namespace fm{
          * This function should cooperatively check the Monitor::should_stop field
          * locking monitor::run_mutex and return if set to true.
          * */
-        virtual void run();
+        virtual void run() = 0;
 
         /*
          * This function is executed by the stop() method, after requesting the

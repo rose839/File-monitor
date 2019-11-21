@@ -14,6 +14,7 @@ namespace fm {
 #define FM_MONITOR_RUN_GUARD std::unique_lock<std::mutex> run_guard(run_mutex);
 #define FM_MONITOR_RUN_GUARD_LOCK run_guard.lock();
 #define FM_MONITOR_RUN_GUARD_UNLOCK run_guard.unlock();
+#define FM_MONITOR_NOTIFY_GUARD std::unique_lock<std::mutex> notify_guard(notify_mutex);
 
     Monitor::Monitor(std::vector <string> paths,
                      FM_EVENT_CALLBACK *callback,
@@ -214,6 +215,54 @@ namespace fm {
     bool Monitor::is_running() {
         FM_MONITOR_RUN_GUARD;
         return this->running;
+    }
+
+    std::vector<fm_event_flag> Monitor::filter_flags(const Event &evt) const {
+        if (event_type_filters.empty()) return evt.get_flags();
+
+        std::vector<fm_event_flag> filtered_flags;
+
+        for (auto const &flag : evt.get_flags()) {
+            if (accept_event_type(flag)) filtered_flags.push_back(flag);
+        }
+        return filtered_flags;
+    }
+
+    void Monitor::notify_overflow(const std::string &path) const {
+        if (!allow_overflow) throw fm_exception(std::string("Event queue overflow."));
+
+        time_t curr_time;
+        time(&curr_time);
+
+        notify_events({path, curr_time, {fm_event_flag::Overflow}});
+    }
+
+    void Monitor::notify_events(const std::vector <event> &events) const {
+        FM_MONITOR_NOTIFY_GUARD;
+
+        milliseconds now = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        last_notification.store(now);
+
+        std::vector<Event> filtered_event;
+
+        for (auto const &event : events) {
+            std::vector<fm_event_flag> filtered_flags = filter_flags(event);
+
+            if (filtered_flags.empty()) continue;
+            if (!accept_path(event.get_path())) continue;
+
+            filtered_event.emplace_back(event.get_path(),
+                                        event.get_time(),
+                                        filtered_flags);
+        }
+
+        if (!filtered_event.empty()) {
+            callback(filtered_event, context);
+        }
+    }
+
+    void Monitor::on_stop() {
+
     }
 }
 
