@@ -3,4 +3,4 @@ project(File_monitor)
 
 set(CMAKE_CXX_STANDARD 11)
 
-
+add_subdirectory(libfile_monitor)
