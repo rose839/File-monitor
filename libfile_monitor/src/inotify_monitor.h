@@ -1,6 +1,3 @@
-//
-// Created by mayn on 2019/11/22.
-//
 
 #ifndef FILE_MONITOR_INOTIFY_MONITOR_H
 #define FILE_MONITOR_INOTIFY_MONITOR_H
