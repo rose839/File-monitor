@@ -36,7 +36,7 @@ namespace fm {
         void process_pending_events();
         void remove_watch(int fd);
 
-        inotiry_monitor_impl *impl;
+        inotify_monitor_impl *impl;
     };
 }
 
