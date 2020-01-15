@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "event.h"
+#include "filter.h"
 
 /*
  * @brief Path filters used to accept or reject file change events.
@@ -68,7 +69,7 @@ namespace fm{
          * Parsing errors are notified through an optional error handler.  The valid
          * filters are returned in a vector.
          * */
-        static std::vector<Moniter_filter> read_from_file(const std::string& path,
+        static std::vector<Monitor_filter> read_from_file(const std::string& path,
                                                           void (*err_handler)(std::string) = nullptr);
     };
 

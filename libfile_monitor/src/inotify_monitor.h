@@ -23,7 +23,7 @@ namespace fm {
 
     private:
         Inotify_monitor(const Inotify_monitor &orig) = delete;
-        Inotify_monitor &operator=(const Inotify_monitor &that) delete;
+        Inotify_monitor &operator=(const Inotify_monitor &that) = delete;
 
         void scan_root_paths();
         bool is_watched(const std::string &path) const;

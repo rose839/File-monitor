@@ -1,8 +1,11 @@
-
 #include <cstdarg>
 #include <cstdio>
 #include <vector>
+#include <string>
 #include "string_utils.h"
+
+using std::string;
+using std::vector;
 
 namespace fm {
     namespace string_utils {

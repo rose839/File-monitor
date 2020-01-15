@@ -27,7 +27,7 @@ namespace fm {
 
     fm_event_flag Event::get_event_flag_by_name(const std::string &name) {
 #define FM_MAKE_PAIR_FROM_NAME(p) {#p, p}
-        static const map<std::string, fm_event_flag> flag_by_names = {
+        static const std::map<std::string, fm_event_flag> flag_by_names = {
                 FM_MAKE_PAIR_FROM_NAME(NoOp),
                 FM_MAKE_PAIR_FROM_NAME(PlatformSpecific),
                 FM_MAKE_PAIR_FROM_NAME(Created),
@@ -52,10 +52,10 @@ namespace fm {
         return flag->second;
     }
 
-    string event::get_event_flag_name(const fm_event_flag& flag)
+    string Event::get_event_flag_name(const fm_event_flag& flag)
     {
 #define FM_MAKE_PAIR_FROM_NAME(p) {p, #p}
-        static const map<fm_event_flag, string> names_by_flag = {
+        static const std::map<fm_event_flag, string> names_by_flag = {
                 FM_MAKE_PAIR_FROM_NAME(NoOp),
                 FM_MAKE_PAIR_FROM_NAME(PlatformSpecific),
                 FM_MAKE_PAIR_FROM_NAME(Created),
@@ -77,13 +77,13 @@ namespace fm {
         auto name = names_by_flag.find(flag);
 
         if (name == names_by_flag.end())
-            throw fm_exception(_("Unknown event type."), FM_ERR_UNKNOWN_VALUE);
+            throw fm_exception(std::string("Unknown event type."), FM_ERR_UNKNOWN_VALUE);
 
         return name->second;
     }
 
     std::ostream &operator<<(std::ostream &os, const fm_event_flag flag) {
-        return out << Event::get_event_flag_name(flag);
+        return os << Event::get_event_flag_name(flag);
     }
 }
 

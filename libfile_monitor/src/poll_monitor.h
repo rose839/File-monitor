@@ -57,7 +57,7 @@ namespace fm {
         POLL_MONITOR_DATA *previous_data;
         POLL_MONITOR_DATA *new_data;
 
-        std::vector<event> events;
+        std::vector<Event> events;
         time_t curr_time;
     };
 }

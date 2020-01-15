@@ -3,7 +3,7 @@
 
 namespace fm {
     fm_exception::fm_exception(const fm::fm_exception &other) noexcept :
-        cause(other.cause), code(other.error_code)
+        cause(other.cause), error_code(other.error_code)
     {
     }
 
@@ -15,16 +15,16 @@ namespace fm {
     fm_exception::~fm_exception() noexcept = default;
 
     const char* fm_exception::what() const noexcept {
-        return this->cause.c_str;
+        return this->cause.c_str();
     }
 
-    int fm_exception::error_code() const noexcept {
+    int fm_exception::err_code() const noexcept {
         return error_code;
     }
 
     fm_exception& fm_exception::operator=(const fm::fm_exception &other) noexcept {
         if (&other == this) {
-            return *this
+            return *this;
         }
 
         this->cause = other.cause;

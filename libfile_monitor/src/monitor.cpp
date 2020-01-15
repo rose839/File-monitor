@@ -35,7 +35,7 @@ namespace fm {
 
     void Monitor::set_latency(double latency) {
         if (latency < 0) {
-            throw fm_exception("Latency cannot be negative.", FSW_ERR_INVALID_LATENCY);
+            throw fm_exception("Latency cannot be negative.", FM_ERR_INVALID_LATENCY);
         }
         this->latency = latency;
     }
@@ -45,14 +45,14 @@ namespace fm {
     }
 
     milliseconds Monitor::get_latency_ms() const {
-        return duration_cast<milliseconds>(latency*1000*1.1);
+	return milliseconds((long long) (latency * 1000 * 1.1));
     }
 
     void Monitor::set_recursive(bool recursive) {
         this->recursive = recursive;
     }
 
-    void monitor::set_directory_only(bool directory_only) {
+    void Monitor::set_directory_only(bool directory_only) {
         this->directory_only = directory_only;
     }
 
@@ -104,7 +104,7 @@ namespace fm {
         }
     }
 
-    void Monitor::set_allow_overflow(bool overflow) {
+    void Monitor::set_follow_symlinks(bool follow) {
         follow_symlinks = follow;
     }
 
@@ -118,7 +118,7 @@ namespace fm {
 
         for (const auto &filter : event_type_filters) {
             if (filter.flag == event_type) {
-                return ture;
+                return true;
             }
         }
     }
@@ -130,7 +130,7 @@ namespace fm {
             if (std::regex_search(path, filter.regex)) {
                 if (filter.type == fm_filter_type::filter_include)
                     return true;
-                is_excluded = (filter.type == fm_filter_type:filter_exclude);
+                is_excluded = (filter.type == fm_filter_type::filter_exclude);
             }
         }
 
@@ -159,13 +159,13 @@ namespace fm {
             if (montor->should_stop) break;
             run_guard.unlock();
 
-            milliseconds elapsed = duration_cast<milliseconds>(system_clock.now().time_since_epoch()) -
+            milliseconds elapsed = duration_cast<milliseconds>(system_clock::now().time_since_epoch()) -
                     montor->last_notification.load();
 
             /* Sleep and loop again if sufficient time has not elapsed yet */
             if (elapsed < montor->get_latency_ms()) {
                 milliseconds to_sleep = montor->get_latency_ms() - elapsed;
-                secnods max_sleep_time(2);
+                seconds max_sleep_time(2);
 
                 std::this_thread::sleep_for(to_sleep>max_sleep_time?max_sleep_time:to_sleep);
                 continue;
@@ -234,10 +234,10 @@ namespace fm {
         time_t curr_time;
         time(&curr_time);
 
-        notify_events({path, curr_time, {fm_event_flag::Overflow}});
+        notify_events({{path, curr_time, {fm_event_flag::Overflow}}});
     }
 
-    void Monitor::notify_events(const std::vector <event> &events) const {
+    void Monitor::notify_events(const std::vector<Event> &events) const {
         FM_MONITOR_NOTIFY_GUARD;
 
         milliseconds now = duration_cast<milliseconds>(system_clock::now().time_since_epoch());

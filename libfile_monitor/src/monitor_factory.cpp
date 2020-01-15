@@ -2,6 +2,9 @@
 #include <vector>
 #include <string>
 #include "monitor_factory.h"
+#include "error.h"
+#include "event.h"
+#include "exception.h"
 
 #if defined(HAVE_SYS_INOTIFY_H)
 #include "inotify_monitor.hpp"
@@ -9,12 +12,12 @@
 #include "poll_monitor.h"
 
 namespace fm {
-    static monitor *create_default_monitor(std::vector<std::string> paths,
+    static Monitor *create_default_monitor(std::vector<std::string> paths,
                                            FM_EVENT_CALLBACK *callback,
                                            void *context) {
         fm_monitor_type type;
 
-#if define(HAVE_SYS_INOTIFY_H)
+#if defined(HAVE_SYS_INOTIFY_H)
         type = fm_monitor_type::inotify_monitor_type;
 #else
         type = fm_monitor_type::poll_monitor_type;
@@ -49,24 +52,24 @@ namespace fm {
 
     std::map<std::string, fm_monitor_type>& Monitor_factory::creators_by_string()
     {
-#define fsw_quote(x) #x
-        static std::map<std::string, fsw_monitor_type> creator_by_string_set;
+#define fm_quote(x) #x
+        static std::map<std::string, fm_monitor_type> creator_by_string_set;
 
 
 #if defined(HAVE_SYS_INOTIFY_H)
-        creator_by_string_set[fsw_quote(inotify_monitor)] = fm_monitor_type::inotify_monitor_type;
+        creator_by_string_set[fm_quote(inotify_monitor)] = fm_monitor_type::inotify_monitor_type;
 #endif
 
-        creator_by_string_set[fsw_quote(
+        creator_by_string_set[fm_quote(
                 poll_monitor)] = fm_monitor_type::poll_monitor_type;
 
         return creator_by_string_set;
 #undef fsw_quote
     }
 
-    monitor *Monitor_factory::create_monitor(const std::string& name,
+    Monitor *Monitor_factory::create_monitor(const std::string& name,
                                              std::vector<std::string> paths,
-                                             FSW_EVENT_CALLBACK *callback,
+                                             FM_EVENT_CALLBACK *callback,
                                              void *context)
     {
         auto i = creators_by_string().find(name);

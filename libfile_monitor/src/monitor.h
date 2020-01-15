@@ -10,13 +10,19 @@
 
 #include <string>
 #include <vector>
+#include <map>
+#include <atomic>
+#include <chrono>
+#include <regex>
+#include <mutex>
 #include "event.h"
+#include "filter.h"
 
 namespace fm{
 
     typedef struct _compiled_monitor_filter {
         std::regex regex;
-        fsw_filter_type type;
+        fm_filter_type type;
     }COMPILED_MONITOR_FILTER_S;
 
     /*
@@ -39,7 +45,7 @@ namespace fm{
      *    - A reference to the vector of events.
      *    - A pointer to the context data set by the caller.
      * */
-    typedef void FM_EVENT_CALLBACK(const std::vector<event>&, void *);
+    typedef void FM_EVENT_CALLBACK(const std::vector<Event>&, void *);
 
     /*
      * @brief Base class of all monitors.
@@ -115,7 +121,7 @@ namespace fm{
                 FM_EVENT_CALLBACK *callback,
                 void *context = nullptr);
         virtual ~Monitor();
-        Monitor(const Moniter &orig) = delete;
+        Monitor(const Monitor &orig) = delete;
         Monitor &operator=(const Monitor &that) = delete;
 
         void set_property(const std::string &name, const std::string &value);
@@ -155,7 +161,7 @@ namespace fm{
 
         void add_event_type_filter(const EVENT_TYPE_FILTER &filter);
         void set_event_type_filters(
-                const std::vector<fsw_event_type_filter>& filters);
+                const std::vector<EVENT_TYPE_FILTER>& filters);
 
         /*
          * The monitor status is marked running and it starts watching for
@@ -190,7 +196,7 @@ namespace fm{
     protected:
         bool accept_event_type(enum fm_event_flag event_type) const;
         bool accept_path(std::string path) const;
-        void notify_events(const std::vector<event>& events) const;
+        void notify_events(const std::vector<Event>& events) const;
         void notify_overflow(const std::string& path) const;
 
         /*
@@ -219,7 +225,7 @@ namespace fm{
         virtual void on_stop();
 
     protected:
-        std::vector<std::path> paths;
+        std::vector<std::string> paths;
         std::map<std::string, std::string> properties;
         FM_EVENT_CALLBACK *callback;
         void *context = nullptr;
@@ -246,7 +252,7 @@ namespace fm{
         std::vector<EVENT_TYPE_FILTER> event_type_filters;  // event type filter
 
         static void inactivity_callback(Monitor *montor);
-        std::atomic<std::chrono::milliseconds> last_notification;
+        mutable std::atomic<std::chrono::milliseconds> last_notification;
     };
 }
 

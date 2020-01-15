@@ -1,9 +1,18 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <ctime>
+#include <string>
+#include <vector>
+#include <mutex>
 #include "monitor.h"
 #include "event.h"
 #include "poll_monitor.h"
+#include "path_utils.h"
+
+using std::string;
+using std::vector;
+using std::unique_lock;
+using std::mutex;
 
 #define FM_MTIME(stat) ((stat).st_mtime)
 #define FM_CTIME(stat) ((stat).st_ctime)
@@ -27,7 +36,7 @@ namespace fm {
     bool Poll_monitor::initial_scan_callback(const std::string &path, const struct stat &fd_stat) {
         if (previous_data->tracked_files.count(path)) return false;
 
-        WATCHED_FILE_INFO wfi{FM_MTIME(stat), FM_CTIME(stat)};
+        WATCHED_FILE_INFO wfi{FM_MTIME(fd_stat), FM_CTIME(fd_stat)};
         previous_data->tracked_files[path] = wfi;
 
         return true;
@@ -36,18 +45,18 @@ namespace fm {
     bool Poll_monitor::intermediate_scan_callback(const std::string &path, const struct stat &fd_stat) {
         if (new_data->tracked_files.count(path)) return false;
 
-        WATCHED_FILE_INFO wfi{FM_MTIME(stat), FM_CTIME(stat)};
+        WATCHED_FILE_INFO wfi{FM_MTIME(fd_stat), FM_CTIME(fd_stat)};
         new_data->tracked_files[path] = wfi;
 
         if (previous_data->tracked_files.count(path)) {
             WATCHED_FILE_INFO pwfi = previous_data->tracked_files[path];
             vector<fm_event_flag> flags;
 
-            if (FM_MTIME(stat) > pwfi.mtime) {
+            if (FM_MTIME(fd_stat) > pwfi.mtime) {
                 flags.push_back(fm_event_flag::Updated);
             }
 
-            if (FM_CTIME(stat) >pwfi.ctime) {
+            if (FM_CTIME(fd_stat) >pwfi.ctime) {
                 flags.push_back(fm_event_flag::AttributeModified);
             }
 
@@ -57,8 +66,8 @@ namespace fm {
 
             previous_data->tracked_files.erase(path);
         } else {
-            vector<fsw_event_flag> flags;
-            flags.push_back(fsw_event_flag::Created);
+            vector<fm_event_flag> flags;
+            flags.push_back(fm_event_flag::Created);
             events.emplace_back(path, curr_time, flags);
         }
 
@@ -135,7 +144,7 @@ namespace fm {
         for (;;) {
             unique_lock<mutex> run_guard(run_mutex);
             if (should_stop) break;
-            run_guard.unlock;
+            run_guard.unlock();
 
             sleep(latency < MIN_POLL_LATENCY ? MIN_POLL_LATENCY : latency);
             time(&curr_time);

@@ -5,9 +5,11 @@
 #include <map>
 #include <sys/select.h>
 #include <limits.h>
+#include <unistd.h>
 #include "exception.h"
 #include "path_utils.h"
 #include "monitor.h"
+#include "log.h"
 #include "inotify_monitor.h"
 
 using namespace std;
@@ -16,7 +18,7 @@ namespace fm {
 
     struct inotify_monitor_impl {
         int inotify_monitor_handle = -1;
-        std::vector<event> events;
+        std::vector<Event> events;
 
         set<int> watched_descriptors;
         map<string ,int> path_to_wd;
@@ -123,8 +125,8 @@ namespace fm {
         }
     }
 
-    void Inotify_monitor::preprocess_dir_event(struct Inotify_event *event) {
-        vector::<fm_event_flag> flags;
+    void Inotify_monitor::preprocess_dir_event(struct inotify_event *event) {
+        vector<fm_event_flag> flags;
 
         if (event->mask & IN_ISDIR) flags.push_back(fm_event_flag::IsDir);
         if (event->mask & IN_MOVE_SELF) flags.push_back(fm_event_flag::Updated);
@@ -219,7 +221,7 @@ namespace fm {
         {
             std::ostringstream log;
             log << "IN_DELETE_SELF: " << event->wd << "::" << filename_stream.str() << "\n";
-            FSW_ELOG(log.str().c_str());
+            FM_ELOG(log.str().c_str());
 
             impl->descriptors_to_remove.insert(event->wd);
         }
@@ -236,7 +238,7 @@ namespace fm {
         preprocess_node_event(event);
     }
 
-    void inotify_monitor::remove_watch(int wd)
+    void Inotify_monitor::remove_watch(int wd)
     {
         /*
          * No need to remove the inotify watch because it is removed automatically

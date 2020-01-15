@@ -6,19 +6,20 @@
 namespace fm{
 
     class Monitor_factory{
+    public:
         /*
          * Creates a monitor of the specified type.
          *
          * The other parameters are forwarded to the fm::Monitor() constructor.
          * */
-        static Moniter *create_monitor(fm_monitor_type type,
+        static Monitor *create_monitor(fm_monitor_type type,
                                       std::vector<std::string> paths,
                                       FM_EVENT_CALLBACK *callback,
                                       void *context = nullptr);
 
-        static monitor *create_monitor(const std::string& name,
+        static Monitor *create_monitor(const std::string& name,
                                        std::vector<std::string> paths,
-                                       FSW_EVENT_CALLBACK *callback,
+                                       FM_EVENT_CALLBACK *callback,
                                        void *context = nullptr);
         static std::vector<std::string> get_types();
         static bool exists_type(const std::string& name);

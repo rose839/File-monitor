@@ -3,8 +3,10 @@
 #define FILE_MONITOR_EXCEPTION_H
 
 #include <exception.h>
-#include <string.h>
+#include <string>
 #include "error.h"
+
+using std::string;
 
 namespace fm {
     class fm_exception : public std::exception {
@@ -14,7 +16,7 @@ namespace fm {
         fm_exception& operator=(const fm_exception &other) noexcept;
 
         virtual const char* what() const noexcept;
-        virtual int error_code() const noexcept;
+        virtual int err_code() const noexcept;
         virtual ~fm_exception() noexcept;
 
         /*
@@ -23,7 +25,7 @@ namespace fm {
         explicit operator int () const noexcept;
 
     private:
-        std::string cause;
+        string cause;
         int error_code;
     };
 }
