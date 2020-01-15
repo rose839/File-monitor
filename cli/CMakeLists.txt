@@ -1,6 +1,9 @@
-set(SOURCE_FILES fswatch.cpp
-        fswatch.hpp
-        gettext.h
-        ../../libfswatch_config.h)
-add_executable(fswatch ${SOURCE_FILES}) target_include_directories(fswatch 
-PUBLIC ../.. .) target_link_libraries(fswatch LINK_PUBLIC libfswatch)
+option(PACKAGE_NAME "package name" ON)
+
+set(SOURCE_FILES fmonitor.cpp
+        fmonitor.h
+        config.h)
+        
+add_executable(fmonitor ${SOURCE_FILES}) 
+target_include_directories(fmonitor PUBLIC ../libfile_monitor/src .) 
+target_link_libraries(fmonitor LINK_PUBLIC libfile_monitor.so)

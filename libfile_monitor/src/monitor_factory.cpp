@@ -1,4 +1,3 @@
-
 #include <vector>
 #include <string>
 #include "monitor_factory.h"
