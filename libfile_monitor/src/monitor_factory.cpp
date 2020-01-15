@@ -5,9 +5,10 @@
 #include "error.h"
 #include "event.h"
 #include "exception.h"
+#include "config.h"
 
 #if defined(HAVE_SYS_INOTIFY_H)
-#include "inotify_monitor.hpp"
+#include "inotify_monitor.h"
 #endif
 #include "poll_monitor.h"
 
