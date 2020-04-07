@@ -121,6 +121,7 @@ namespace fm {
                 return true;
             }
         }
+		reurn false;
     }
 
     bool Monitor::accept_path(std::string path) const {
