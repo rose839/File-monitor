@@ -4,6 +4,24 @@
 #include "event.h"
 
 namespace fm {
+	fm_event_flag g_all_event_flags[] = {
+		NoOp,
+		PlatformSpecific,
+		Created,
+		Updated,
+		Removed,
+		Renamed,
+		OwnerModified,
+		AttributeModified,
+		MovedFrom,
+		MovedTo,
+		IsFile,
+		IsDir,
+		IsSymLink,
+		Link,
+		Overflow
+	};
+
     Event::Event(std::string path, time_t event_time, std::vector <fm_event_flag> flags) :
         path(std::move(path)), event_time(event_time), flags(std::move(flags))
     {

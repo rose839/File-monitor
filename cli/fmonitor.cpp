@@ -22,7 +22,45 @@ static const int OPT_MONITOR_PROPERTY = 133;
 static const int OPT_FIRE_IDLE_EVENTS = 134;
 static const int OPT_FILTER_FROM = 135;
 
+static Monitor *active_monitor = nullptr; // current active mnitor
+
+/* information get from command params */
+static std::vector<Monitor_filter> filters;
+static std::vector<EVENT_TYPE_FILTER> event_filters;
+static std::vector<std::string> filter_files;
+static bool _0flag = false;
+static bool _1flag = false;
+static bool aflag = false;
+static bool allow_overflow = false;
+static int batch_marker_flag = false;
+static bool dflag = false;
+static bool Eflag = false;
+static bool fieFlag = false;
+static bool Iflag = false;
+static bool Lflag = false;
+static bool mflag = false;
+static bool nflag = false;
+static bool oflag = false;
+static bool rflag = false;
+static bool tflag = false;
+static bool uflag = false;
+static bool vflag = false;
 static int version_flag = false;
+static bool xflag = false;
+static double lvalue = 1.0;
+static std::string monitor_name;
+static std::string tformat = "%c";
+static std::string batch_marker = Event::get_event_flag_name(fm_event_flag::NoOp);
+static int format_flag = false;
+static std::string format;
+static std::string event_flag_separator = " ";
+static std::map<std::string, std::string> monitor_properties;
+
+static void list_monitor_types(ostream &stream) {
+	for (auto &type : Monitor_factory::get_types()) {
+		stream << "   " << type << "\n";
+	}
+}
 
 static void usage(ostream &stream) {
 	stream << "\n\n";
@@ -63,50 +101,371 @@ static void usage(ostream &stream) {
 	stream << "                       " << "Print event flags using the specified separator.\n";
 	stream << " -v, --verbose         " << "Print verbose output.\n";
 	stream << "     --version         " << "Print the version of " << PACKAGE_NAME << " and exit.\n";
-	stream << "\n\n";
+	stream << "\n";
+
+	stream << "Available monitors in this platform:\n\n";
+	list_monitor_types(stream);
+	stream << std::endl;
 }
+
+static bool validate_latency(double latency) {
+  if (latency == 0.0) {
+    std::cerr << "Invalid value: " << optarg << std::endl;
+    return false;
+  }
+
+  if (errno == ERANGE || latency == HUGE_VAL) {
+    std::cerr << _("Value out of range: ") << optarg << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+static bool parse_event_bitmask(const char *optarg) {
+	try {
+		auto bitmask = std::stoul(optarg, nullptr, 10);
+
+		for (auto& item : g_all_event_flags)
+		{
+		    if ((bitmask & item) == item)
+		    {
+		      event_filters.push_back({item});
+		    }
+		}
+
+		return true;
+	} catch (std::invalid_argument& ex) {
+		return false;
+	}
+}
+
+
+static bool parse_event_filter(const char *optarg) {
+	if (parse_event_bitmask(optarg)) return true;
+
+	try {
+		event_filters.push_back({Event::get_event_flag_by_name(optarg)});
+		return true;
+	} catch (fm_exception& ex) {
+		std::cerr << ex.what() << std::endl;
+		return false;
+	}
+}
+
+static void print_version(std::ostream& stream) {
+	stream << VERSION_STRING << "\n";
+	stream << std::endl;
+}
+
+static int printf_event(const std::string& fmt,
+                        const Event& evt,
+                        const struct printf_event_callbacks& callback,
+                        std::ostream& os) {
+  /*
+   * %t - time (further formatted using -f and strftime)
+   * %p - event path
+   * %f - event flags (event separator will be formatted with a separate option)
+   */
+  for (size_t i = 0; i < format.length(); ++i) {
+    /* If the character does not start a format directive, copy it as it is */
+    if (format[i] != '%') {
+      	os << format[i];
+      	continue;
+    }
+
+    /* If this is the end of the string, dump an error */
+    if (i == format.length() - 1) {
+      	return -1;
+    }
+
+    /* Advance to next format and check which directive it is */
+    const char c = format[++i];
+
+    switch (c) {
+		case '%':
+		  os << '%';
+		  break;
+		case '0':
+		  os << '\0';
+		  break;
+		case 'n':
+		  os << '\n';
+		  break;
+		case 'f':
+		  callback.format_f(evt);
+		  break;
+		case 'p':
+		  callback.format_p(evt);
+		  break;
+		case 't':
+		  callback.format_t(evt);
+		  break;
+		default:
+		  return -1;
+    }
+  }
+
+  return 0;
+}
+
+
+static void format_noop(const event& evt) {
+}
+
+static int printf_event_validate_format(const std::string& fmt)
+{
+
+  struct printf_event_callbacks noop_callbacks {
+      format_noop,
+      format_noop,
+      format_noop
+  };
+
+  const std::vector<fm_event_flag> flags;
+  const Event empty("", 0, flags);
+  std::ostream noop_stream(nullptr);
+
+  return printf_event(fmt, empty, noop_callbacks, noop_stream);
+}
+
 
 static void parse_opts(int argc, char **argv) {
 	int ch;
   	string short_options = "01ade:Ef:hi:Il:LMm:nortuvx";
 	int option_index = 0;
 	static struct option long_options[] = {
-	{"access",               no_argument,       nullptr,       'a'},
-	{"allow-overflow",       no_argument,       nullptr,       OPT_ALLOW_OVERFLOW},
-	{"batch-marker",         optional_argument, nullptr,       OPT_BATCH_MARKER},
-	{"directories",          no_argument,       nullptr,       'd'},
-	{"event",                required_argument, nullptr,       OPT_EVENT_TYPE},
-	{"event-flags",          no_argument,       nullptr,       'x'},
-	{"event-flag-separator", required_argument, nullptr,       OPT_EVENT_FLAG_SEPARATOR},
-	{"exclude",              required_argument, nullptr,       'e'},
-	{"extended",             no_argument,       nullptr,       'E'},
-	{"filter-from",          required_argument, nullptr,       OPT_FILTER_FROM},
-	{"fire-idle-events",     no_argument,       nullptr,       OPT_FIRE_IDLE_EVENTS},
-	{"follow-links",         no_argument,       nullptr,       'L'},
-	{"format",               required_argument, nullptr,       OPT_FORMAT},
-	{"format-time",          required_argument, nullptr,       'f'},
-	{"help",                 no_argument,       nullptr,       'h'},
-	{"include",              required_argument, nullptr,       'i'},
-	{"insensitive",          no_argument,       nullptr,       'I'},
-	{"latency",              required_argument, nullptr,       'l'},
-	{"list-monitors",        no_argument,       nullptr,       'M'},
-	{"monitor",              required_argument, nullptr,       'm'},
-	{"monitor-property",     required_argument, nullptr,       OPT_MONITOR_PROPERTY},
-	{"numeric",              no_argument,       nullptr,       'n'},
-	{"one-per-batch",        no_argument,       nullptr,       'o'},
-	{"one-event",            no_argument,       nullptr,       '1'},
-	{"print0",               no_argument,       nullptr,       '0'},
-	{"recursive",            no_argument,       nullptr,       'r'},
-	{"timestamp",            no_argument,       nullptr,       't'},
-	{"utc-time",             no_argument,       nullptr,       'u'},
-	{"verbose",              no_argument,       nullptr,       'v'},
-	{"version",              no_argument,       &version_flag, true},
-	{nullptr, 0,                                nullptr,       0}
+		{"access",               no_argument,       nullptr,       'a'},
+		{"allow-overflow",       no_argument,       nullptr,       OPT_ALLOW_OVERFLOW},
+		{"batch-marker",         optional_argument, nullptr,       OPT_BATCH_MARKER},
+		{"directories",          no_argument,       nullptr,       'd'},
+		{"event",                required_argument, nullptr,       OPT_EVENT_TYPE},
+		{"event-flags",          no_argument,       nullptr,       'x'},
+		{"event-flag-separator", required_argument, nullptr,       OPT_EVENT_FLAG_SEPARATOR},
+		{"exclude",              required_argument, nullptr,       'e'},
+		{"extended",             no_argument,       nullptr,       'E'},
+		{"filter-from",          required_argument, nullptr,       OPT_FILTER_FROM},
+		{"fire-idle-events",     no_argument,       nullptr,       OPT_FIRE_IDLE_EVENTS},
+		{"follow-links",         no_argument,       nullptr,       'L'},
+		{"format",               required_argument, nullptr,       OPT_FORMAT},
+		{"format-time",          required_argument, nullptr,       'f'},
+		{"help",                 no_argument,       nullptr,       'h'},
+		{"include",              required_argument, nullptr,       'i'},
+		{"insensitive",          no_argument,       nullptr,       'I'},
+		{"latency",              required_argument, nullptr,       'l'},
+		{"list-monitors",        no_argument,       nullptr,       'M'},
+		{"monitor",              required_argument, nullptr,       'm'},
+		{"monitor-property",     required_argument, nullptr,       OPT_MONITOR_PROPERTY},
+		{"numeric",              no_argument,       nullptr,       'n'},
+		{"one-per-batch",        no_argument,       nullptr,       'o'},
+		{"one-event",            no_argument,       nullptr,       '1'},
+		{"print0",               no_argument,       nullptr,       '0'},
+		{"recursive",            no_argument,       nullptr,       'r'},
+		{"timestamp",            no_argument,       nullptr,       't'},
+		{"utc-time",             no_argument,       nullptr,       'u'},
+		{"verbose",              no_argument,       nullptr,       'v'},
+		{"version",              no_argument,       &version_flag, true},
+		{nullptr, 0,                                nullptr,       0}
 	};
 
-	
+	while ((ch = getopt_long(argc,
+	                    argv,
+	                    short_options.c_str(),
+	                    long_options,
+	                    &option_index)) != -1) {
+		switch (ch) {
+		    case '0':
+		      _0flag = true;
+		      break;
+
+		    case '1':
+		      _1flag = true;
+		      break;
+
+		    case 'a':
+		      aflag = true;
+		      break;
+
+		    case 'd':
+		      dflag = true;
+		      break;
+
+		    case 'e':
+		      filters.push_back({optarg, fm_filter_type::filter_exclude});
+		      break;
+
+		    case 'E':
+		      Eflag = true;
+		      break;
+
+		    case 'f':
+		      tformat = std::string(optarg);
+		      break;
+
+		    case 'h':
+		      usage(std::cout);
+		      exit(FM_EXIT_OK);
+
+		    case 'i':
+		      filters.push_back({optarg, fm_filter_type::filter_include});
+		      break;
+
+		    case 'I':
+		      Iflag = true;
+		      break;
+
+		    case 'l':
+		      lvalue = strtod(optarg, nullptr);
+
+		      if (!validate_latency(lvalue)) {
+		          exit(FM_EXIT_LATENCY);
+		      }
+
+		      break;
+
+		    case 'L':
+		      Lflag = true;
+		      break;
+
+		    case 'M':
+		      list_monitor_types(std::cout);
+		      exit(FM_EXIT_OK);
+
+		    case 'm':
+		      mflag = true;
+		      monitor_name = std::string(optarg);
+		      break;
+
+		    case 'n':
+		      nflag = true;
+		      xflag = true;
+		      break;
+
+		    case 'o':
+		      oflag = true;
+		      break;
+
+		    case 'r':
+		      rflag = true;
+		      break;
+
+		    case 't':
+		      tflag = true;
+		      break;
+
+		    case 'u':
+		      uflag = true;
+		      break;
+
+		    case 'v':
+		      vflag = true;
+		      break;
+
+		    case 'x':
+		      xflag = true;
+		      break;
+
+		    case OPT_BATCH_MARKER:
+		      if (optarg) batch_marker = optarg;
+		      batch_marker_flag = true;
+		      break;
+
+		    case OPT_FORMAT:
+		      format_flag = true;
+		      format = optarg;
+		      break;
+
+		    case OPT_EVENT_FLAG_SEPARATOR:
+		      event_flag_separator = optarg;
+		      break;
+
+		    case OPT_EVENT_TYPE:
+		      if (!parse_event_filter(optarg))
+		      {
+		          exit(FM_ERR_UNKNOWN_VALUE);
+		      }
+		      break;
+
+		    case OPT_ALLOW_OVERFLOW:
+		      allow_overflow = true;
+		      break;
+
+		    case OPT_MONITOR_PROPERTY:
+		      std::string param(optarg);
+		      size_t eq_pos = param.find_first_of('=');
+		      if (eq_pos == std::string::npos) {
+		      	  std::cerr << "Invalid property format." << std::endl;
+		          exit(FM_ERR_INVALID_PROPERTY);
+		      }
+
+		      monitor_properties[param.substr(0, eq_pos)] = param.substr(eq_pos + 1);
+		      break;
+
+		    case OPT_FIRE_IDLE_EVENTS:
+		      fieFlag = true;
+		      break;
+
+		    case OPT_FILTER_FROM:
+		      filter_files.emplace_back(optarg);
+		      break;
+
+		    case '?':
+		      usage(std::cerr);
+		      exit(FM_EXIT_UNK_OPT);
+		}
+	}
+
+	if (version_flag) {
+	    print_version(std::cout);
+	    exit(FSW_EXIT_OK);
+ 	}
+
+	// --format is incompatible with any other format option.
+	if (format_flag && (tflag || xflag)) {
+		std::cerr <<
+		     "--format is incompatible with any other format option such as -t and -x."
+		     <<
+		     std::endl;
+		exit(FM_EXIT_FORMAT);
+	}
+
+	if (format_flag && oflag) {
+    	std::cerr << "--format is incompatible with -o." << std::endl;
+    	exit(FM_EXIT_FORMAT);
+  	}
+
+	/* If no format was specified use:
+     	* %p as the default.
+     	* -t adds "%t " at the beginning of the format.
+    	* -x adds " %f" at the end of the format.
+    	* '\n' is used as record separator unless -0 is used, in which case '\0'
+      	    is used instead.
+     */
+    if (format_flag) {
+		/* test the user format */
+		if (printf_event_validate_format(format) < 0) {
+			std::cerr << "Invalid format." << std::endl;
+			exit(FM_EXIT_FORMAT);
+		}
+	} else {
+		/* build event format */
+		if (tflag) {
+		    format = "%t ";
+		}
+
+		format += "%p";
+
+		if (xflag) {
+		  format += " %f";
+		}
+	}
 }
 
 int main(int argc, char **argv) {
-	
+	parse_opts(argc, argv);
+
+	if (optind == argc) {
+	    std::cerr << "Invalid number of arguments." << std::endl;
+	    exit(FM_EXIT_UNK_OPT);
+  	}
 }

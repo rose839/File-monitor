@@ -1,4 +1,5 @@
 option(PACKAGE_NAME "package name" ON)
+option(VERSION_STRING "version string" ON)
 
 set(SOURCE_FILES fmonitor.cpp
         fmonitor.h)
