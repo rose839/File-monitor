@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <getopt.h>
+#include "monitor_factory.h"
 #include "fmonitor.h"
 #include "config.h"
 
@@ -19,6 +21,8 @@ static const int OPT_ALLOW_OVERFLOW = 132;
 static const int OPT_MONITOR_PROPERTY = 133;
 static const int OPT_FIRE_IDLE_EVENTS = 134;
 static const int OPT_FILTER_FROM = 135;
+
+static int version_flag = false;
 
 static void usage(ostream &stream) {
 	stream << "\n\n";
@@ -58,7 +62,7 @@ static void usage(ostream &stream) {
 	stream << "     --event-flag-separator=STRING\n";
 	stream << "                       " << "Print event flags using the specified separator.\n";
 	stream << " -v, --verbose         " << "Print verbose output.\n";
-	stream << "     --version         " << "Print the version of ") << PACKAGE_NAME << " and exit.\n";
+	stream << "     --version         " << "Print the version of " << PACKAGE_NAME << " and exit.\n";
 	stream << "\n\n";
 }
 
