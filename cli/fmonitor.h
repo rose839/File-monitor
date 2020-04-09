@@ -1,10 +1,14 @@
 #ifndef FMONITOR_H
 #define FMONITOR_H
 
+#include "event.h"
+
+using namespace fm;
+
 struct printf_event_callbacks {
-	void (*format_f)(const event& evt);
-	void (*format_p)(const event& evt);
-	void (*format_t)(const event& evt);
+	void (*format_f)(const Event& evt);
+	void (*format_p)(const Event& evt);
+	void (*format_t)(const Event& evt);
 };
 
 /* exit error num */

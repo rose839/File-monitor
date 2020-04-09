@@ -1,6 +1,21 @@
 #include <iostream>
 #include <string>
 #include <getopt.h>
+#include <exception>
+#include <csignal>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cerrno>
+#include <vector>
+#include <map>
+#include "path_utils.h"
+#include "event.h"
+#include "monitor.h"
+#include "monitor_factory.h"
+#include "error.h"
+#include "log.h"
+#include "exception.h"
 #include "monitor_factory.h"
 #include "fmonitor.h"
 #include "config.h"
@@ -164,7 +179,7 @@ static bool validate_latency(double latency) {
   }
 
   if (errno == ERANGE || latency == HUGE_VAL) {
-    std::cerr << _("Value out of range: ") << optarg << std::endl;
+    std::cerr << "Value out of range: " << optarg << std::endl;
     return false;
   }
 
@@ -210,7 +225,7 @@ static void print_version(std::ostream& stream) {
 static int printf_event(const std::string& fmt,
                         const Event& evt,
                         const struct printf_event_callbacks& callback,
-                        std::ostream& os) {
+                        std::ostream& os = std::cout) {
   /*
    * %t - time (further formatted using -f and strftime)
    * %p - event path
@@ -259,7 +274,7 @@ static int printf_event(const std::string& fmt,
 }
 
 
-static void format_noop(const event& evt) {
+static void format_noop(const Event& evt) {
 }
 
 static int printf_event_validate_format(const std::string& fmt)
@@ -440,14 +455,16 @@ static void parse_opts(int argc, char **argv) {
 		      break;
 
 		    case OPT_MONITOR_PROPERTY:
-		      std::string param(optarg);
-		      size_t eq_pos = param.find_first_of('=');
-		      if (eq_pos == std::string::npos) {
-		      	  std::cerr << "Invalid property format." << std::endl;
-		          exit(FM_ERR_INVALID_PROPERTY);
-		      }
+		      {
+		      	std::string param(optarg);
+		      	size_t eq_pos = param.find_first_of('=');
+		      	if (eq_pos == std::string::npos) {
+		      	    std::cerr << "Invalid property format." << std::endl;
+		            exit(FM_ERR_INVALID_PROPERTY);
+		      	}
 
 		      monitor_properties[param.substr(0, eq_pos)] = param.substr(eq_pos + 1);
+		      }
 		      break;
 
 		    case OPT_FIRE_IDLE_EVENTS:
@@ -466,7 +483,7 @@ static void parse_opts(int argc, char **argv) {
 
 	if (version_flag) {
 	    print_version(std::cout);
-	    exit(FSW_EXIT_OK);
+	    exit(FM_EXIT_OK);
  	}
 
 	// --format is incompatible with any other format option.
@@ -514,7 +531,7 @@ static void close_monitor() {
   if (active_monitor) active_monitor->stop();
 }
 
-extern "C" static void close_handler(int signal) {
+static void close_handler(int signal) {
 	FM_ELOG("Executing termination handler.\n");
 	close_monitor();
 }
@@ -561,7 +578,7 @@ static void write_batch_marker() {
 	}
 }
 
-static void write_one_batch_event(const std::vector<event>& events)
+static void write_one_batch_event(const std::vector<Event>& events)
 {
   std::cout << events.size();
   print_end_of_event_record();
@@ -583,7 +600,7 @@ static void write_events(const std::vector<Event>& events)
 	}
 }
 
-void process_events(const std::vector<event>& events, void *context)
+void process_events(const std::vector<Event>& events, void *context)
 {
 	if (oflag) {
 		write_one_batch_event(events);
@@ -672,7 +689,7 @@ int main(int argc, char **argv) {
     	active_monitor = nullptr;
   	} catch (fm_exception& lex) {
     	std::cerr << lex.what() << "\n";
-   	 	std::cerr << "Status code: " << lex.error_code() << "\n";
+   	 std::cerr << "Status code: " << lex.err_code() << "\n";
 
    	 	return FM_EXIT_ERROR;
   	} catch (std::invalid_argument& ex) {
