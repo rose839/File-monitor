@@ -56,6 +56,55 @@ static std::string format;
 static std::string event_flag_separator = " ";
 static std::map<std::string, std::string> monitor_properties;
 
+static const unsigned int TIME_FORMAT_BUFF_SIZE = 128;
+
+static void print_event_path(const Event& evt) {
+	std::cout << evt.get_path();
+}
+
+static void print_event_timestamp(const Event& evt) {
+	const time_t& evt_time = evt.get_time();
+
+	char time_format_buffer[TIME_FORMAT_BUFF_SIZE];
+	struct tm *tm_time = uflag ? gmtime(&evt_time) : localtime(&evt_time);
+
+	std::string date =
+			strftime(time_format_buffer,
+			         TIME_FORMAT_BUFF_SIZE,
+			         tformat.c_str(),
+			         tm_time) ? std::string(time_format_buffer) : std::string(
+			  "<date format error>");
+
+	std::cout << date;
+}
+
+static void print_event_flags(const Event& evt) {
+	const std::vector<fm_event_flag>& flags = evt.get_flags();
+
+	if (nflag) {
+		int mask = 0;
+		for (const fm_event_flag& flag : flags) {
+	  		mask += static_cast<int> (flag);
+		}
+
+		std::cout << mask;
+	} else {
+		for (size_t i = 0; i < flags.size(); ++i) {
+	 		std::cout << flags[i];
+
+	  		/* Event flag separator is currently hard-coded */
+	  		if (i != flags.size() - 1) std::cout << event_flag_separator;
+		}
+	}
+}
+
+struct printf_event_callbacks event_format_callbacks {
+	print_event_flags,
+	print_event_path,
+	print_event_timestamp
+};
+
+
 static void list_monitor_types(ostream &stream) {
 	for (auto &type : Monitor_factory::get_types()) {
 		stream << "   " << type << "\n";
@@ -461,6 +510,143 @@ static void parse_opts(int argc, char **argv) {
 	}
 }
 
+static void close_monitor() {
+  if (active_monitor) active_monitor->stop();
+}
+
+extern "C" static void close_handler(int signal) {
+	FM_ELOG("Executing termination handler.\n");
+	close_monitor();
+}
+
+static void register_signal_handlers() {
+	struct sigaction action;
+	action.sa_handler = close_handler;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+
+	if (sigaction(SIGTERM, &action, nullptr) == 0) {
+		FM_ELOG("SIGTERM handler registered.\n");
+	} else {
+		std::cerr << "SIGTERM handler registration failed." << std::endl;
+	}
+
+	if (sigaction(SIGABRT, &action, nullptr) == 0) {
+		FM_ELOG("SIGABRT handler registered.\n");
+	} else {
+		std::cerr << "SIGABRT handler registration failed." << std::endl;
+	}
+
+	if (sigaction(SIGINT, &action, nullptr) == 0) {
+		FM_ELOG("SIGINT handler registered.\n");
+	} else {
+		std::cerr << "SIGINT handler registration failed" << std::endl;
+	}
+}
+
+static void print_end_of_event_record()
+{
+	if (_0flag) {
+		std::cout << '\0';
+		std::cout.flush();
+	} else {
+		std::cout << std::endl;
+	}
+}
+
+static void write_batch_marker() {
+	if (batch_marker_flag) {
+		std::cout << batch_marker;
+		print_end_of_event_record();
+	}
+}
+
+static void write_one_batch_event(const std::vector<event>& events)
+{
+  std::cout << events.size();
+  print_end_of_event_record();
+
+  write_batch_marker();
+}
+
+static void write_events(const std::vector<Event>& events)
+{
+	for (const Event& evt : events) {
+		printf_event(format, evt, event_format_callbacks);
+		print_end_of_event_record();
+	}
+
+	write_batch_marker();
+
+	if (_1flag) {
+		close_monitor();
+	}
+}
+
+void process_events(const std::vector<event>& events, void *context)
+{
+	if (oflag) {
+		write_one_batch_event(events);
+	} else {
+		write_events(events);
+	}
+}
+
+static void start_monitor(int argc, char **argv, int optind) {
+	std::vector<std::string> paths;
+
+	for (auto i = optind; i < argc; ++i) {
+		std::string path(fm_realpath(argv[i], nullptr));
+
+		FM_ELOG("Adding path: %s\n", path.c_str());
+
+		paths.push_back(path);
+	}
+
+	if (mflag) {
+		active_monitor = Monitor_factory::create_monitor(monitor_name,
+	                                                 	paths,
+	                                                 	process_events);
+	} else {
+		active_monitor = Monitor_factory::create_monitor(
+	  		fm_monitor_type::system_default_monitor_type,
+	  		paths,
+	  		process_events);
+	}
+
+	for (auto& filter : filters) {
+		filter.case_sensitive = !Iflag;
+		filter.extended = Eflag;
+	}
+
+	/* Load filters from the specified files */
+	for (const auto& filter_file : filter_files) {
+		auto filters_from_file =
+	  		Monitor_filter::read_from_file(filter_file,
+	                                 	   [](std::string f) {
+	                                   	   		std::cerr << "Invalid filter: " << f
+	                                        << "\n";
+	                                 	   });
+
+		std::move(filters_from_file.begin(),
+	          	  filters_from_file.end(),
+	          	  std::back_inserter(filters));
+	}
+
+	active_monitor->set_properties(monitor_properties);
+	active_monitor->set_allow_overflow(allow_overflow);
+	active_monitor->set_latency(lvalue);
+	active_monitor->set_fire_idle_event(fieFlag);
+	active_monitor->set_recursive(rflag);
+	active_monitor->set_directory_only(dflag);
+	active_monitor->set_event_type_filters(event_filters);
+	active_monitor->set_filters(filters);
+	active_monitor->set_follow_symlinks(Lflag);
+	active_monitor->set_watch_access(aflag);
+
+	active_monitor->start();
+}
+
 int main(int argc, char **argv) {
 	parse_opts(argc, argv);
 
@@ -468,4 +654,41 @@ int main(int argc, char **argv) {
 	    std::cerr << "Invalid number of arguments." << std::endl;
 	    exit(FM_EXIT_UNK_OPT);
   	}
+
+	if (mflag && !Monitor_factory::exists_type(monitor_name)) {
+    	std::cerr << "Invalid monitor name." << std::endl;
+    	exit(FM_EXIT_MONITOR_NAME);
+  	}
+
+	try {
+    	/* registering handlers to clean up resources */
+    	register_signal_handlers();
+    	atexit(close_monitor);
+
+    	/* configure and start the monitor loop */
+    	start_monitor(argc, argv, optind);
+
+    	delete active_monitor;
+    	active_monitor = nullptr;
+  	} catch (fm_exception& lex) {
+    	std::cerr << lex.what() << "\n";
+   	 	std::cerr << "Status code: " << lex.error_code() << "\n";
+
+   	 	return FM_EXIT_ERROR;
+  	} catch (std::invalid_argument& ex) {
+    	std::cerr << ex.what() << "\n";
+
+    	return FM_EXIT_ERROR;
+  	} catch (std::exception& conf) {
+    	std::cerr << "An error occurred and the program will be terminated.\n";
+    	std::cerr << conf.what() << "\n";
+
+    	return FM_EXIT_ERROR;
+  	} catch (...) {
+    	std::cerr << "An unknown error occurred and the program will be terminated.\n";
+
+    	return FM_EXIT_ERROR;
+  	}
+
+  return FM_EXIT_OK;
 }
