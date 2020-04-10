@@ -16,10 +16,9 @@ else()
 	message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake
-	                ${CMAKE_CURRENT_BINARY_DIR}/include/config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
-
 add_subdirectory(libfile_monitor)
 add_subdirectory(cli)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake
+			${CMAKE_CURRENT_BINARY_DIR}/include/config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)

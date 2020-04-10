@@ -32,4 +32,4 @@ if (HAVE_SYS_INOTIFY_H)
 endif (HAVE_SYS_INOTIFY_H)
 
 add_library(file_monitor SHARED ${LIB_SOURCE_FILES})
-target_include_directories(file_monitor PUBLIC src ${CMAKE_CURRENT_BINARY_DIR}/include)
+target_include_directories(file_monitor PUBLIC src ${PROJECT_BINARY_DIR}/include)
