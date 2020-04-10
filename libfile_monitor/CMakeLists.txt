@@ -20,7 +20,9 @@ set(LIB_SOURCE_FILES
         src/poll_monitor.cpp
         src/poll_monitor.h
         src/string_utils.cpp
-        src/string_utils.h)
+        src/string_utils.h
+        src/path_utils.cpp
+        src/path_utils.h)
 
 include(CheckIncludeFiles)
 CHECK_INCLUDE_FILES(sys/inotify.h HAVE_SYS_INOTIFY_H)

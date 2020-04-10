@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <errno.h>
+#include <sys/types.h>
 #include <iostream>
 #include <system_error>
 #include "path_utils.h"
@@ -22,15 +23,16 @@ namespace fm {
         }
 
         while (struct dirent *entry = readdir(dir)) {
-            children.emplace_back(ent->d_name);
+            children.emplace_back(entry->d_name);
         }
 
-        close(dir);
+        closedir(dir);
         return children;
     }
 
     bool read_link_path(const string &path, string &link_path) {
-        link_path = fm_realpath(path.c_str, nullptr);
+        link_path = fm_realpath(path.c_str(), nullptr);
+		return true;
     }
 
     string fm_realpath(const char *path, char *resolved_path) {
@@ -45,7 +47,7 @@ namespace fm {
     }
 
     bool stat_path(const string &path, struct stat &fd_stat) {
-        if (stat(path.c_str, &fd_stat) == 0)
+        if (stat(path.c_str(), &fd_stat) == 0)
             return true;
         return false;
     }

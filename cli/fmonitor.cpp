@@ -18,6 +18,8 @@
 #include "exception.h"
 #include "monitor_factory.h"
 #include "fmonitor.h"
+#include "path_utils.h"
+#include "filter.h"
 #include "config.h"
 
 using std::ostream;
