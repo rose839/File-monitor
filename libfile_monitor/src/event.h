@@ -29,7 +29,7 @@ namespace fm {
         Overflow = (1 << 13)          /* The event queue has overflowed. */
     };
 
-	extern fm_event_flag g_all_event_flags[];
+	extern std::vector<fm_event_flag> g_all_event_flags;
 
     class Event {
     public:

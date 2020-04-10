@@ -1,10 +1,10 @@
-
+#include <vector>
 #include <map>
 #include "exception.h"
 #include "event.h"
 
 namespace fm {
-	fm_event_flag g_all_event_flags[] = {
+	std::vector<fm_event_flag> g_all_event_flags = {
 		NoOp,
 		PlatformSpecific,
 		Created,
