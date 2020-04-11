@@ -10,6 +10,7 @@ set(LIB_SOURCE_FILES
         src/event.h
         src/exception.cpp
         src/exception.h
+        src/filter.cpp
         src/filter.h
         src/log.cpp
         src/log.h
