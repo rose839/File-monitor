@@ -13,6 +13,8 @@
 #include "event.h"
 #include "filter.h"
 
+#define handle_error(t) if (err_handler) err_handler(t)
+
 /*
  * @brief Path filters used to accept or reject file change events.
  *  A path filter is a regular expression used to accept or reject file change
