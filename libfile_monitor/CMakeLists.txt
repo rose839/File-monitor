@@ -36,3 +36,4 @@ endif (HAVE_SYS_INOTIFY_H)
 
 add_library(file_monitor SHARED ${LIB_SOURCE_FILES})
 target_include_directories(file_monitor PUBLIC src ${PROJECT_BINARY_DIR}/include)
+install(TARGETS file_monitor LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

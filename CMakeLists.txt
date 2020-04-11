@@ -18,6 +18,9 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
+set(CMAKE_INSTALL_BINDIR "/usr/bin/")
+set(CMAKE_INSTALL_LIBDIR "/lib64/")
+
 add_subdirectory(libfile_monitor)
 add_subdirectory(cli)
 
